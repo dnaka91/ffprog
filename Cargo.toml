@@ -1,0 +1,20 @@
+[package]
+name = "ffprog"
+version = "0.1.0"
+authors = ["Dominik Nakamura <dnaka91@gmail.com>"]
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+anyhow = "1.0.56"
+bincode = "2.0.0-rc.1"
+clap = { version = "3.1.6", features = ["derive"] }
+crossterm = "0.22.1"
+flate2 = "1.0.22"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"
+serde_with = { version = "1.12.0", default-features = false }
+tui = "0.17.0"
+
+[profile.release]
+lto = true

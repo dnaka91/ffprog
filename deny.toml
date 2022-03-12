@@ -1,0 +1,6 @@
+[licenses]
+allow = []
+allow-osi-fsf-free = "both"
+exceptions = [
+    { allow = ["AGPL-3.0"], name = "ffprog", version = "*" },
+]
