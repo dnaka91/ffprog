@@ -19,7 +19,7 @@ use tui::{
     symbols::Marker,
     text::{Span, Spans},
     widgets::{
-        Axis, Block, BorderType, Borders, Chart, Dataset, Gauge, GraphType, Paragraph, Tabs,
+        Axis, Block, BorderType, Borders, Chart, Clear, Dataset, Gauge, GraphType, Paragraph, Tabs,
     },
     Terminal,
 };
@@ -130,6 +130,8 @@ fn show_progress(
     });
     let start_time = Instant::now();
     let mut timestamp = Duration::ZERO;
+
+    terminal.draw(|f| f.render_widget(Clear, f.size()))?;
 
     loop {
         terminal.draw(|f| {
@@ -290,6 +292,8 @@ fn show_stats(terminal: &mut Terminal<impl Backend>, stats: Stats) -> Result<()>
             .map(|(d, p)| (d.as_seconds_f64(), p.speed)),
         |speed| format!("{speed:.2}x"),
     );
+
+    terminal.draw(|f| f.render_widget(Clear, f.size()))?;
 
     loop {
         terminal.draw(|f| {
