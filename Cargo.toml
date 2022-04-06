@@ -19,3 +19,4 @@ tui = "0.17.0"
 
 [profile.release]
 lto = true
+strip = true
