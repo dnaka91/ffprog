@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -240,9 +240,11 @@ fn show_progress(
         while event::poll(std::time::Duration::from_millis(250))? {
             if let Event::Key(event) = event::read()? {
                 match event.code {
-                    KeyCode::Char('q') | KeyCode::Esc => return Ok(history),
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        bail!("encoding cancelled by user");
+                    }
                     KeyCode::Char('c') if event.modifiers.contains(KeyModifiers::CONTROL) => {
-                        return Ok(history)
+                        bail!("encoding cancelled by user");
                     }
                     _ => {}
                 }
