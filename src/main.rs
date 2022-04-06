@@ -47,8 +47,14 @@ struct Args {
     #[clap(short = 'y', long)]
     overwrite: bool,
     /// Only load the statistics and display them, skipping any encoding.
-    #[clap(short)]
-    stats: bool,
+    #[clap(short = 's', long)]
+    load_stats: bool,
+    /// Show the statistics screen after the encoding is done.
+    #[clap(long)]
+    show_stats: bool,
+    /// Save the statistics to a file, so they can be loaded afterwards.
+    #[clap(long)]
+    save_stats: bool,
     /// Arguments to pass to FFmpeg.
     #[clap(raw = true)]
     args: Vec<String>,
@@ -71,7 +77,7 @@ fn main() -> Result<()> {
 }
 
 fn run(terminal: &mut Terminal<impl Backend + Write>, args: &Args) -> Result<()> {
-    let stats = if args.stats {
+    let stats = if args.load_stats {
         stats::load(&args.input)?
     } else {
         let ffprobe = ffprobe::run(&args.input)?;
@@ -85,11 +91,16 @@ fn run(terminal: &mut Terminal<impl Backend + Write>, args: &Args) -> Result<()>
             history,
         };
 
-        stats::save(&stats, &args.input)?;
+        if args.save_stats {
+            stats::save(&stats, &args.input)?;
+        }
+
         stats
     };
 
-    show_stats(terminal, stats)?;
+    if args.load_stats || args.show_stats {
+        show_stats(terminal, stats)?;
+    }
 
     Ok(())
 }
