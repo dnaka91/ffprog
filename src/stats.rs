@@ -3,12 +3,12 @@ use std::{
     fs::File,
     io::{BufReader, BufWriter, Write},
     path::{Path, PathBuf},
-    time::Duration,
 };
 
 use anyhow::Result;
 use bincode::{config, Decode, Encode};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use time::Duration;
 
 use crate::{ffmpeg::Progress, ffprobe::Format};
 
@@ -21,7 +21,7 @@ pub struct Stats {
 enum Version {
     V1 {
         import: FormatV1,
-        history: Vec<(Duration, ProgressV1)>,
+        history: Vec<(BincodeDuration, ProgressV1)>,
     },
 }
 
@@ -33,7 +33,7 @@ impl From<&Stats> for Version {
                 .history
                 .iter()
                 .cloned()
-                .map(|(d, p)| (d, p.into()))
+                .map(|(d, p)| (d.into(), p.into()))
                 .collect(),
         }
     }
@@ -44,7 +44,10 @@ impl From<Version> for Stats {
         match v {
             Version::V1 { import, history } => Stats {
                 import: import.into(),
-                history: history.into_iter().map(|(d, p)| (d, p.into())).collect(),
+                history: history
+                    .into_iter()
+                    .map(|(d, p)| (d.into(), p.into()))
+                    .collect(),
             },
         }
     }
@@ -57,8 +60,8 @@ struct FormatV1 {
     pub nb_programs: u32,
     pub format_name: String,
     pub format_long_name: Option<String>,
-    pub start_time: Duration,
-    pub duration: Duration,
+    pub start_time: BincodeDuration,
+    pub duration: BincodeDuration,
     pub size: u64,
     pub bit_rate: u64,
     pub probe_score: u8,
@@ -73,8 +76,8 @@ impl From<Format> for FormatV1 {
             nb_programs: f.nb_programs,
             format_name: f.format_name,
             format_long_name: f.format_long_name,
-            start_time: f.start_time,
-            duration: f.duration,
+            start_time: f.start_time.into(),
+            duration: f.duration.into(),
             size: f.size,
             bit_rate: f.bit_rate,
             probe_score: f.probe_score,
@@ -91,8 +94,8 @@ impl From<FormatV1> for Format {
             nb_programs: f.nb_programs,
             format_name: f.format_name,
             format_long_name: f.format_long_name,
-            start_time: f.start_time,
-            duration: f.duration,
+            start_time: f.start_time.into(),
+            duration: f.duration.into(),
             size: f.size,
             bit_rate: f.bit_rate,
             probe_score: f.probe_score,
@@ -109,7 +112,7 @@ struct ProgressV1 {
     pub total_size: u64,
     pub out_time_us: u64,
     pub out_time_ms: u64,
-    pub out_time: Duration,
+    pub out_time: BincodeDuration,
     pub dup_frames: u64,
     pub drop_frames: u64,
     pub speed: f64,
@@ -124,7 +127,7 @@ impl From<Progress> for ProgressV1 {
             total_size: p.total_size,
             out_time_us: p.out_time_us,
             out_time_ms: p.out_time_ms,
-            out_time: p.out_time,
+            out_time: p.out_time.into(),
             dup_frames: p.dup_frames,
             drop_frames: p.drop_frames,
             speed: p.speed,
@@ -141,7 +144,7 @@ impl From<ProgressV1> for Progress {
             total_size: p.total_size,
             out_time_us: p.out_time_us,
             out_time_ms: p.out_time_ms,
-            out_time: p.out_time,
+            out_time: p.out_time.into(),
             dup_frames: p.dup_frames,
             drop_frames: p.drop_frames,
             speed: p.speed,
@@ -177,4 +180,39 @@ pub fn load(input: &Path) -> Result<Stats> {
     let version = bincode::decode_from_std_read::<Version, _, _>(&mut src, config::standard())?;
 
     Ok(version.into())
+}
+
+struct BincodeDuration(Duration);
+
+impl Encode for BincodeDuration {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        self.0.whole_seconds().encode(encoder)?;
+        self.0.subsec_nanoseconds().encode(encoder)?;
+        Ok(())
+    }
+}
+
+impl Decode for BincodeDuration {
+    fn decode<D: bincode::de::Decoder>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        Ok(Self(
+            Duration::seconds(i64::decode(decoder)?) + Duration::nanoseconds(i64::decode(decoder)?),
+        ))
+    }
+}
+
+impl From<Duration> for BincodeDuration {
+    fn from(d: Duration) -> Self {
+        Self(d)
+    }
+}
+
+impl From<BincodeDuration> for Duration {
+    fn from(d: BincodeDuration) -> Self {
+        d.0
+    }
 }

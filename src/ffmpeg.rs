@@ -1,10 +1,10 @@
 use std::{
     io::{BufRead, BufReader},
     process::{Child, ChildStdout, Command, Stdio},
-    time::Duration,
 };
 
 use anyhow::{ensure, Context, Result};
+use time::Duration;
 
 pub struct ProgressIter {
     child: Option<Child>,
@@ -84,9 +84,9 @@ fn parse_time(value: &str) -> Result<Duration> {
     let (seconds, micros) = value.split_once('.').context("seconds missing")?;
 
     let total_seconds =
-        hours.parse::<u64>()? * 3600 + minutes.parse::<u64>()? * 60 + seconds.parse::<u64>()?;
+        hours.parse::<i64>()? * 3600 + minutes.parse::<i64>()? * 60 + seconds.parse::<i64>()?;
 
-    Ok(Duration::from_secs(total_seconds) + Duration::from_micros(micros.parse()?))
+    Ok(Duration::seconds(total_seconds) + Duration::microseconds(micros.parse()?))
 }
 
 fn finish_process(child: Option<Child>) -> Result<()> {

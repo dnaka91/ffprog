@@ -1,7 +1,6 @@
 use std::{
     io::{self, Write},
     path::PathBuf,
-    time::{Duration, Instant},
 };
 
 use anyhow::Result;
@@ -12,6 +11,7 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use stats::Stats;
+use time::{Duration, Instant};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout},
@@ -176,7 +176,7 @@ fn show_progress(
                     )
                     .gauge_style(Style::default().fg(Color::White).bg(Color::Black))
                     .ratio(
-                        (progress.out_time.as_secs_f64() / ffprobe.duration.as_secs_f64())
+                        (progress.out_time.as_seconds_f64() / ffprobe.duration.as_seconds_f64())
                             .max(0.0)
                             .min(1.0),
                     ),
@@ -235,7 +235,7 @@ fn show_progress(
             f.render_widget(bitrate.create(), lr[1]);
         })?;
 
-        while event::poll(Duration::from_millis(250))? {
+        while event::poll(std::time::Duration::from_millis(250))? {
             if let Event::Key(event) = event::read()? {
                 match event.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(history),
@@ -274,17 +274,20 @@ fn show_stats(terminal: &mut Terminal<impl Backend>, stats: Stats) -> Result<()>
         stats
             .history
             .iter()
-            .map(|(d, p)| (d.as_secs_f64(), p.bitrate as f64)),
+            .map(|(d, p)| (d.as_seconds_f64(), p.bitrate as f64)),
     );
     let fps_stats = OneLineStats::new(
-        stats.history.iter().map(|(d, p)| (d.as_secs_f64(), p.fps)),
+        stats
+            .history
+            .iter()
+            .map(|(d, p)| (d.as_seconds_f64(), p.fps)),
         |fps| format!("{fps:.1}"),
     );
     let speed_stats = OneLineStats::new(
         stats
             .history
             .iter()
-            .map(|(d, p)| (d.as_secs_f64(), p.speed)),
+            .map(|(d, p)| (d.as_seconds_f64(), p.speed)),
         |speed| format!("{speed:.2}x"),
     );
 
@@ -365,7 +368,7 @@ impl BitrateStats {
         let x_labels = [0.0, x_max * 0.25, x_max * 0.50, x_max * 0.75, x_max]
             .into_iter()
             .map(|label| {
-                let d = Duration::from_secs_f64(label);
+                let d = Duration::seconds_f64(label);
                 Span::from(format_duration(d))
             })
             .collect();
@@ -458,7 +461,7 @@ impl OneLineStats {
         let x_labels = [0.0, x_max * 0.25, x_max * 0.50, x_max * 0.75, x_max]
             .into_iter()
             .map(|label| {
-                let d = Duration::from_secs_f64(label);
+                let d = Duration::seconds_f64(label);
                 Span::from(format_duration(d))
             })
             .collect();
@@ -514,6 +517,6 @@ impl OneLineStats {
 }
 
 fn format_duration(d: Duration) -> String {
-    let d = d.as_secs();
+    let d = d.whole_seconds().abs();
     format!("{:02}:{:02}:{:02}", d / 3600, d / 60 % 60, d % 60)
 }

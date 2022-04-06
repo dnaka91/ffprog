@@ -1,7 +1,8 @@
-use std::{collections::BTreeMap, path::Path, process::Command, time::Duration};
+use std::{collections::BTreeMap, path::Path, process::Command};
 
 use anyhow::{ensure, Result};
 use serde::Deserialize;
+use time::Duration;
 
 #[derive(Deserialize)]
 struct Report {
@@ -57,10 +58,10 @@ mod de {
         fmt::{self, Display},
         marker::PhantomData,
         str::FromStr,
-        time::Duration,
     };
 
     use serde::de::{self, Deserializer, Visitor};
+    use time::Duration;
 
     pub fn from_str<'de, D, T>(deserializer: D) -> Result<T, D::Error>
     where
@@ -124,7 +125,7 @@ mod de {
         {
             FromStrVisitor::<f64>::default()
                 .visit_str(v)
-                .map(Duration::from_secs_f64)
+                .map(Duration::seconds_f64)
         }
     }
 }
