@@ -41,22 +41,22 @@ mod values;
 #[clap(about, author, version, arg_required_else_help(true))]
 struct Args {
     /// Same input media file that is used in the FFmpeg arguments.
-    #[clap(short, long, value_parser)]
+    #[clap(short, long)]
     input: PathBuf,
     /// Overwrite the output file if it already exists.
-    #[clap(short = 'y', long, action)]
+    #[clap(short = 'y', long)]
     overwrite: bool,
     /// Only load the statistics and display them, skipping any encoding.
-    #[clap(short = 's', long, action)]
+    #[clap(short = 's', long)]
     load_stats: bool,
     /// Show the statistics screen after the encoding is done.
-    #[clap(long, action)]
+    #[clap(long)]
     show_stats: bool,
     /// Save the statistics to a file, so they can be loaded afterwards.
-    #[clap(long, action)]
+    #[clap(long)]
     save_stats: bool,
     /// Arguments to pass to FFmpeg.
-    #[clap(raw = true, value_parser)]
+    #[clap(raw = true)]
     args: Vec<String>,
 }
 
