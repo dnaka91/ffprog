@@ -6,12 +6,22 @@ This project is a small tool, mostly for myself, to better visualize the progres
 it's running. It is specifically built for the goal of re-encoding audio/video with a focus on
 reducing the output size.
 
-## Build
+## Installation
 
-Have the latest `rustup`, `rust` toolchain and `cargo` installed and run:
+### From source
+
+Have the latest `rust` toolchain and `cargo` installed (preferably through `rustup`) and run:
 
 ```sh
-cargo build
+cargo install --git https://github.com/dnaka91/ffprog.git
+```
+
+### From AUR
+
+Arch linux useres can install **FFprog** from the [AUR](https://aur.archlinux.org) using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers). For example:
+
+```sh
+paru -S ffprog
 ```
 
 ## Usage
