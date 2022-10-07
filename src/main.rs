@@ -1,12 +1,6 @@
-use std::{
-    fs::OpenOptions,
-    io::{self, Write},
-    path::{Path, PathBuf},
-};
+use std::io::{self, Write};
 
-use anyhow::{bail, ensure, Context, Result};
-use clap::{CommandFactory, Parser, Subcommand, ValueHint};
-use clap_complete::Shell;
+use anyhow::{bail, Result};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -27,68 +21,26 @@ use tui::{
 };
 
 use crate::{
+    cli::{Args, Command},
     ffmpeg::{Progress, ProgressIter},
     ffprobe::Format,
     values::{ChartValues, SparklineValues},
 };
 
 mod array;
+mod cli;
 mod ffmpeg;
 mod ffprobe;
 mod stats;
 mod values;
-
-/// Visualizer for the FFmpeg encoding process.
-#[derive(Parser)]
-#[command(about, author, version, arg_required_else_help(true))]
-struct Args {
-    /// Same input media file that is used in the FFmpeg arguments.
-    #[arg(short, long)]
-    input: PathBuf,
-    /// Overwrite the output file if it already exists.
-    #[arg(short = 'y', long)]
-    overwrite: bool,
-    /// Only load the statistics and display them, skipping any encoding.
-    #[arg(short = 's', long)]
-    load_stats: bool,
-    /// Show the statistics screen after the encoding is done.
-    #[arg(long)]
-    show_stats: bool,
-    /// Save the statistics to a file, so they can be loaded afterwards.
-    #[arg(long)]
-    save_stats: bool,
-    /// Arguments to pass to FFmpeg.
-    #[arg(raw = true)]
-    args: Vec<String>,
-    #[command(subcommand)]
-    cmd: Option<Command>,
-}
-
-#[derive(Subcommand)]
-enum Command {
-    /// Generate auto-completion scripts for various shells.
-    Completions {
-        /// Shell to generate an auto-completion script for.
-        #[arg(value_enum)]
-        shell: Shell,
-    },
-    /// Generate man pages into the given directory.
-    Manpages {
-        /// Target directory, that must already exist and be empty. If the any file with the same
-        /// name as any of the man pages already exist, it'll not be overwritten, but instead an
-        /// error be returned.
-        #[arg(value_hint = ValueHint::DirPath)]
-        dir: PathBuf,
-    },
-}
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
     if let Some(cmd) = args.cmd {
         match cmd {
-            Command::Completions { shell } => completions(shell),
-            Command::Manpages { dir } => manpages(&dir)?,
+            Command::Completions { shell } => cli::completions(shell),
+            Command::Manpages { dir } => cli::manpages(&dir)?,
         }
 
         Ok(())
@@ -568,56 +520,4 @@ impl OneLineStats {
 fn format_duration(d: Duration) -> String {
     let d = d.whole_seconds().abs();
     format!("{:02}:{:02}:{:02}", d / 3600, d / 60 % 60, d % 60)
-}
-
-/// Generate shell completions, written to the standard output.
-#[allow(clippy::unnecessary_wraps)]
-pub fn completions(shell: Shell) {
-    clap_complete::generate(
-        shell,
-        &mut Args::command(),
-        env!("CARGO_PKG_NAME"),
-        &mut io::stdout().lock(),
-    );
-}
-
-/// Generate man pages in the target directory. The directory must already exist and none of the
-/// files exist, or an error is returned.
-pub fn manpages(dir: &Path) -> Result<()> {
-    fn print(dir: &Path, app: &clap::Command) -> Result<()> {
-        let name = app.get_display_name().unwrap_or_else(|| app.get_name());
-        let out = dir.join(format!("{name}.1"));
-        let mut out = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&out)
-            .with_context(|| format!("the file `{}` already exists", out.display()))?;
-
-        clap_mangen::Man::new(app.clone()).render(&mut out)?;
-        out.flush()?;
-
-        for sub in app.get_subcommands() {
-            print(dir, sub)?;
-        }
-
-        Ok(())
-    }
-
-    ensure!(dir.try_exists()?, "target directory doesn't exist");
-
-    let mut app = Args::command();
-    app.build();
-
-    print(dir, &app)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Args;
-
-    #[test]
-    fn verify_cli() {
-        use clap::CommandFactory;
-        Args::command().debug_assert();
-    }
 }
