@@ -1,10 +1,12 @@
 use std::{
+    fs::OpenOptions,
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Result};
-use clap::Parser;
+use anyhow::{bail, ensure, Context, Result};
+use clap::{CommandFactory, Parser, Subcommand, ValueHint};
+use clap_complete::Shell;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -58,22 +60,52 @@ struct Args {
     /// Arguments to pass to FFmpeg.
     #[arg(raw = true)]
     args: Vec<String>,
+    #[command(subcommand)]
+    cmd: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Generate auto-completion scripts for various shells.
+    Completions {
+        /// Shell to generate an auto-completion script for.
+        #[arg(value_enum)]
+        shell: Shell,
+    },
+    /// Generate man pages into the given directory.
+    Manpages {
+        /// Target directory, that must already exist and be empty. If the any file with the same
+        /// name as any of the man pages already exist, it'll not be overwritten, but instead an
+        /// error be returned.
+        #[arg(value_hint = ValueHint::DirPath)]
+        dir: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let mut terminal = create_terminal()?;
 
-    // Don't exit with an error here, first restore the terminal to normal mode and
-    // then fail with the error.
-    let result = run(&mut terminal, &args);
+    if let Some(cmd) = args.cmd {
+        match cmd {
+            Command::Completions { shell } => completions(shell),
+            Command::Manpages { dir } => manpages(&dir)?,
+        }
 
-    // Ignore any errors while restoring the terminal. If we fail, there is no way of getting
-    // back to normal mode. Therefore, we skip this error and return the result from the
-    // main execution instead.
-    destroy_terminal(terminal).ok();
+        Ok(())
+    } else {
+        let mut terminal = create_terminal()?;
 
-    result
+        // Don't exit with an error here, first restore the terminal to normal mode and
+        // then fail with the error.
+        let result = run(&mut terminal, &args);
+
+        // Ignore any errors while restoring the terminal. If we fail, there is no way of getting
+        // back to normal mode. Therefore, we skip this error and return the result from the
+        // main execution instead.
+        destroy_terminal(terminal).ok();
+
+        result
+    }
 }
 
 fn run(terminal: &mut Terminal<impl Backend + Write>, args: &Args) -> Result<()> {
@@ -536,6 +568,47 @@ impl OneLineStats {
 fn format_duration(d: Duration) -> String {
     let d = d.whole_seconds().abs();
     format!("{:02}:{:02}:{:02}", d / 3600, d / 60 % 60, d % 60)
+}
+
+/// Generate shell completions, written to the standard output.
+#[allow(clippy::unnecessary_wraps)]
+pub fn completions(shell: Shell) {
+    clap_complete::generate(
+        shell,
+        &mut Args::command(),
+        env!("CARGO_PKG_NAME"),
+        &mut io::stdout().lock(),
+    );
+}
+
+/// Generate man pages in the target directory. The directory must already exist and none of the
+/// files exist, or an error is returned.
+pub fn manpages(dir: &Path) -> Result<()> {
+    fn print(dir: &Path, app: &clap::Command) -> Result<()> {
+        let name = app.get_display_name().unwrap_or_else(|| app.get_name());
+        let out = dir.join(format!("{name}.1"));
+        let mut out = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&out)
+            .with_context(|| format!("the file `{}` already exists", out.display()))?;
+
+        clap_mangen::Man::new(app.clone()).render(&mut out)?;
+        out.flush()?;
+
+        for sub in app.get_subcommands() {
+            print(dir, sub)?;
+        }
+
+        Ok(())
+    }
+
+    ensure!(dir.try_exists()?, "target directory doesn't exist");
+
+    let mut app = Args::command();
+    app.build();
+
+    print(dir, &app)
 }
 
 #[cfg(test)]

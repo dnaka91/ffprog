@@ -9,6 +9,8 @@ license = "AGPL-3.0-only"
 anyhow = "1.0.65"
 bincode = "2.0.0-rc.2"
 clap = { version = "4.0.10", features = ["derive"] }
+clap_complete = "4.0.2"
+clap_mangen = "0.2.2"
 crossterm = "0.25.0"
 flate2 = "1.0.24"
 serde = { version = "1.0.145", features = ["derive"] }
