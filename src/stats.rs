@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::Result;
-use bincode::{config, Decode, Encode};
+use bincode::{config, BorrowDecode, Decode, Encode};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use time::Duration;
 
@@ -201,6 +201,17 @@ impl Decode for BincodeDuration {
     ) -> Result<Self, bincode::error::DecodeError> {
         Ok(Self(
             Duration::seconds(i64::decode(decoder)?) + Duration::nanoseconds(i64::decode(decoder)?),
+        ))
+    }
+}
+
+impl<'de> BorrowDecode<'de> for BincodeDuration {
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        Ok(Self(
+            Duration::seconds(i64::borrow_decode(decoder)?)
+                + Duration::nanoseconds(i64::borrow_decode(decoder)?),
         ))
     }
 }

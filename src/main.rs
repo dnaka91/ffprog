@@ -38,25 +38,25 @@ mod values;
 
 /// Visualizer for the FFmpeg encoding process.
 #[derive(Parser)]
-#[clap(about, author, version, arg_required_else_help(true))]
+#[command(about, author, version, arg_required_else_help(true))]
 struct Args {
     /// Same input media file that is used in the FFmpeg arguments.
-    #[clap(short, long)]
+    #[arg(short, long)]
     input: PathBuf,
     /// Overwrite the output file if it already exists.
-    #[clap(short = 'y', long)]
+    #[arg(short = 'y', long)]
     overwrite: bool,
     /// Only load the statistics and display them, skipping any encoding.
-    #[clap(short = 's', long)]
+    #[arg(short = 's', long)]
     load_stats: bool,
     /// Show the statistics screen after the encoding is done.
-    #[clap(long)]
+    #[arg(long)]
     show_stats: bool,
     /// Save the statistics to a file, so they can be loaded afterwards.
-    #[clap(long)]
+    #[arg(long)]
     save_stats: bool,
     /// Arguments to pass to FFmpeg.
-    #[clap(raw = true)]
+    #[arg(raw = true)]
     args: Vec<String>,
 }
 
@@ -536,4 +536,15 @@ impl OneLineStats {
 fn format_duration(d: Duration) -> String {
     let d = d.whole_seconds().abs();
     format!("{:02}:{:02}:{:02}", d / 3600, d / 60 % 60, d % 60)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Args;
+
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        Args::command().debug_assert();
+    }
 }
