@@ -21,7 +21,7 @@ use tui::{
 };
 
 use crate::{
-    cli::{Args, Command},
+    cli::{Cli, Command, RunArgs},
     ffmpeg::{Progress, ProgressIter},
     ffprobe::Format,
     values::{ChartValues, SparklineValues},
@@ -35,16 +35,9 @@ mod stats;
 mod values;
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let args = Cli::parse();
 
-    if let Some(cmd) = args.cmd {
-        match cmd {
-            Command::Completions { shell } => cli::completions(shell),
-            Command::Manpages { dir } => cli::manpages(&dir)?,
-        }
-
-        Ok(())
-    } else {
+    if let Some(args) = args.run {
         let mut terminal = create_terminal()?;
 
         // Don't exit with an error here, first restore the terminal to normal mode and
@@ -57,10 +50,21 @@ fn main() -> Result<()> {
         destroy_terminal(terminal).ok();
 
         result
+    } else if let Some(cmd) = args.cmd {
+        match cmd {
+            Command::Completions { shell } => {
+                cli::completions(shell);
+                Ok(())
+            }
+            Command::Manpages { dir } => cli::manpages(&dir),
+        }
+    } else {
+        // We should never get here as either the args or a subcommand are always set.
+        Ok(())
     }
 }
 
-fn run(terminal: &mut Terminal<impl Backend + Write>, args: &Args) -> Result<()> {
+fn run(terminal: &mut Terminal<impl Backend + Write>, args: &RunArgs) -> Result<()> {
     let stats = if args.load_stats {
         stats::load(&args.input)?
     } else {

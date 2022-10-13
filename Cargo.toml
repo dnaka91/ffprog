@@ -8,13 +8,13 @@ license = "AGPL-3.0-only"
 [dependencies]
 anyhow = "1.0.65"
 bincode = "2.0.0-rc.2"
-clap = { version = "4.0.10", features = ["derive"] }
+clap = { version = "4.0.14", features = ["derive"] }
 clap_complete = "4.0.2"
 clap_mangen = "0.2.2"
 crossterm = "0.25.0"
 flate2 = "1.0.24"
 serde = { version = "1.0.145", features = ["derive"] }
-serde_json = "1.0.85"
+serde_json = "1.0.86"
 serde_with = { version = "2.0.1", default-features = false }
 time = "0.3.15"
 tui = "0.19.0"

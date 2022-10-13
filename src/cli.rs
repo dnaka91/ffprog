@@ -5,36 +5,26 @@ use std::{
 };
 
 use anyhow::{ensure, Context, Result};
-use clap::{CommandFactory, Parser, Subcommand, ValueHint};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueHint};
 use clap_complete::Shell;
 
 /// Visualizer for the FFmpeg encoding process.
 #[derive(Parser)]
-#[command(about, author, version, arg_required_else_help(true))]
-pub struct Args {
-    /// Same input media file that is used in the FFmpeg arguments.
-    #[arg(short, long, value_hint  = ValueHint::FilePath)]
-    pub input: PathBuf,
-    /// Overwrite the output file if it already exists.
-    #[arg(short = 'y', long)]
-    pub overwrite: bool,
-    /// Only load the statistics and display them, skipping any encoding.
-    #[arg(short = 's', long)]
-    pub load_stats: bool,
-    /// Show the statistics screen after the encoding is done.
-    #[arg(long)]
-    pub show_stats: bool,
-    /// Save the statistics to a file, so they can be loaded afterwards.
-    #[arg(long)]
-    pub save_stats: bool,
-    /// Arguments to pass to FFmpeg.
-    #[arg(raw = true)]
-    pub args: Vec<String>,
+#[command(
+    about,
+    author,
+    version,
+    arg_required_else_help = true,
+    args_conflicts_with_subcommands = true
+)]
+pub struct Cli {
     #[command(subcommand)]
     pub cmd: Option<Command>,
+    #[command(flatten)]
+    pub run: Option<RunArgs>,
 }
 
-impl Args {
+impl Cli {
     pub fn parse() -> Self {
         <Self as Parser>::parse()
     }
@@ -58,12 +48,33 @@ pub enum Command {
     },
 }
 
+#[derive(Args)]
+pub struct RunArgs {
+    /// Same input media file that is used in the FFmpeg arguments.
+    #[arg(short, long, value_hint = ValueHint::FilePath)]
+    pub input: PathBuf,
+    /// Overwrite the output file if it already exists.
+    #[arg(short = 'y', long)]
+    pub overwrite: bool,
+    /// Only load the statistics and display them, skipping any encoding.
+    #[arg(short = 's', long)]
+    pub load_stats: bool,
+    /// Show the statistics screen after the encoding is done.
+    #[arg(long)]
+    pub show_stats: bool,
+    /// Save the statistics to a file, so they can be loaded afterwards.
+    #[arg(long)]
+    pub save_stats: bool,
+    /// Arguments to pass to FFmpeg.
+    #[arg(raw = true)]
+    pub args: Vec<String>,
+}
+
 /// Generate shell completions, written to the standard output.
-#[allow(clippy::unnecessary_wraps)]
 pub fn completions(shell: Shell) {
     clap_complete::generate(
         shell,
-        &mut Args::command(),
+        &mut Cli::command(),
         env!("CARGO_PKG_NAME"),
         &mut io::stdout().lock(),
     );
@@ -93,7 +104,7 @@ pub fn manpages(dir: &Path) -> Result<()> {
 
     ensure!(dir.try_exists()?, "target directory doesn't exist");
 
-    let mut app = Args::command();
+    let mut app = Cli::command();
     app.build();
 
     print(dir, &app)
@@ -101,11 +112,11 @@ pub fn manpages(dir: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::Args;
+    use super::Cli;
 
     #[test]
     fn verify_cli() {
         use clap::CommandFactory;
-        Args::command().debug_assert();
+        Cli::command().debug_assert();
     }
 }
